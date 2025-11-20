@@ -136,11 +136,26 @@ ssed> ✓ Done! Modified config.txt
   - Quick reference card
 
 ### For Developers
-- **[LANGUAGE_SPEC.md](LANGUAGE_SPEC.md)** - Complete natural language specification
-  - Grammar and syntax definition
-  - Pattern matching rules
+
+- **[GRAMMAR.md](GRAMMAR.md)** - Complete formal language specification ⭐
+  - Formal BNF grammar
+  - Complete syntax tree for all complexity levels
+  - Pattern matching system (templates, positional, structured)
+  - Parser implementation guide
+  - Full examples from simple to complex
+
+- **[LANGUAGE_SPEC.md](LANGUAGE_SPEC.md)** - Natural language specification
+  - Human-readable language design
   - Operation types and modifiers
-  - Implementation guidelines
+  - All actions, targets, contexts, and options
+  - Progressive complexity examples
+
+- **[COMPLEX_PATTERNS.md](COMPLEX_PATTERNS.md)** - Advanced pattern design
+  - Template matching with placeholders
+  - Positional parameter system
+  - Capture and reference mechanics
+  - Multi-step operations
+  - Deterministic parsing strategies
 
 - **[SED_TO_SSED_MAPPING.md](SED_TO_SSED_MAPPING.md)** - sed to ssed translation guide
   - Every sed command in natural language
@@ -148,6 +163,7 @@ ssed> ✓ Done! Modified config.txt
   - Migration guide from sed
 
 ### Reference Materials
+
 - **[SED_FEATURES.md](SED_FEATURES.md)** - Complete sed feature reference
   - All sed commands and capabilities
   - Used as feature completeness checklist
@@ -214,7 +230,9 @@ ssed> ✓ Done! Modified config.txt
 ```
 ssed/
 ├── README.md                      # This file
+├── GRAMMAR.md                    # Complete formal BNF grammar ⭐
 ├── LANGUAGE_SPEC.md              # Natural language specification
+├── COMPLEX_PATTERNS.md           # Advanced pattern matching
 ├── SED_TO_SSED_MAPPING.md        # sed feature mapping
 ├── EXAMPLES.md                   # Usage examples
 ├── SED_FEATURES.md               # sed reference (for feature parity)
@@ -222,8 +240,11 @@ ssed/
 ├── cmd/
 │   └── ssed/                     # Main CLI application
 ├── pkg/
-│   ├── nlp/                      # Natural language parser
+│   ├── parser/                   # Core parser (grammar → AST)
+│   ├── lexer/                    # Tokenizer
+│   ├── ast/                      # Abstract syntax tree
 │   ├── patterns/                 # Pattern matching (email, URL, etc.)
+│   ├── templates/                # Template matching system
 │   ├── operations/               # Core operations (replace, delete, etc.)
 │   ├── stream/                   # Stream processor
 │   ├── interactive/              # Interactive mode & REPL
@@ -232,7 +253,8 @@ ssed/
 │   ├── executor/                 # Operation executor
 │   └── fileops/                  # File operations
 └── test/
-    ├── nlp/                      # Parser tests
+    ├── parser/                   # Parser tests
+    ├── lexer/                    # Lexer tests
     ├── integration/              # End-to-end tests
     └── compatibility/            # sed compatibility tests
 ```
@@ -292,12 +314,22 @@ ssed --examples replace
 
 ## Development Roadmap
 
+**Specification (Complete):**
 - [x] Define natural language specification
 - [x] Map all sed features to natural language
 - [x] Create comprehensive examples
-- [ ] Implement natural language parser
+- [x] Design complete formal grammar (BNF)
+- [x] Design template matching system
+- [x] Design positional/structured pattern system
+- [x] Define complete syntax tree for all levels
+
+**Implementation (TODO):**
+- [ ] Implement lexer/tokenizer
+- [ ] Implement parser (grammar → AST)
 - [ ] Implement basic operations (Phase 1)
-- [ ] Add pattern matching (Phase 2)
+- [ ] Add predefined patterns (Phase 2)
+- [ ] Add template matching (Phase 3)
+- [ ] Add positional awareness (Phase 3)
 - [ ] Build interactive mode (Phase 4)
 - [ ] Add sed compatibility mode (Phase 5)
 - [ ] Optimize performance
