@@ -5,6 +5,11 @@ HOOK_DIR=$(git rev-parse --show-toplevel)/.git/hooks
 cat > "$HOOK_DIR/pre-commit" << 'EOF'
 #!/bin/sh
 
+echo "Running golines..."
+if command -v golines > /dev/null 2>&1; then
+    find . -name "*.go" -exec golines -m 100 -w {} \;
+fi
+
 echo "Running golangci-lint..."
 
 if ! command -v golangci-lint > /dev/null 2>&1; then

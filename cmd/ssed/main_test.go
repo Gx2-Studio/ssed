@@ -357,7 +357,11 @@ func TestCLI_InPlaceWithBackup(t *testing.T) {
 	}
 
 	if string(backupContent) != content {
-		t.Errorf("backup should contain original content %q, got %q", content, string(backupContent))
+		t.Errorf(
+			"backup should contain original content %q, got %q",
+			content,
+			string(backupContent),
+		)
 	}
 
 	afterContent, _ := os.ReadFile(tmpFile)

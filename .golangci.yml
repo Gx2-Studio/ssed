@@ -10,3 +10,6 @@ linters-settings:
     allow-trailing-comment: true
     force-short-decl-cuddling: false
     strict-append: false
+
+  gofumpt:
+    extra-rules: true

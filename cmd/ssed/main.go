@@ -90,7 +90,8 @@ func init() {
 
 	rootCmd.Flags().BoolVarP(&preview, "preview", "p", false, "Preview changes without applying")
 	rootCmd.Flags().BoolVarP(&inPlace, "in-place", "i", false, "Edit files in-place")
-	rootCmd.Flags().StringVarP(&backup, "backup", "b", "", "Backup suffix for in-place editing (e.g., .bak)")
+	rootCmd.Flags().
+		StringVarP(&backup, "backup", "b", "", "Backup suffix for in-place editing (e.g., .bak)")
 	rootCmd.Flags().BoolVarP(&quiet, "quiet", "q", false, "Suppress output (only show errors)")
 }
 

@@ -268,7 +268,13 @@ func executeShow(cmd *ast.ShowCommand, input io.Reader, output io.Writer) error 
 	return scanner.Err()
 }
 
-func matchPattern(line, target string, isRegex bool, patternType ast.PatternType, wholeWord bool, re *regexp.Regexp) bool {
+func matchPattern(
+	line, target string,
+	isRegex bool,
+	patternType ast.PatternType,
+	wholeWord bool,
+	re *regexp.Regexp,
+) bool {
 	if isRegex {
 		return re.MatchString(line)
 	}

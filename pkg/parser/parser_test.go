@@ -409,7 +409,11 @@ func TestParseErrorMessages(t *testing.T) {
 			}
 
 			if !strings.Contains(illegal.Message, tt.expectedContain) {
-				t.Errorf("expected message to contain %q, got %q", tt.expectedContain, illegal.Message)
+				t.Errorf(
+					"expected message to contain %q, got %q",
+					tt.expectedContain,
+					illegal.Message,
+				)
 			}
 		})
 	}
@@ -549,21 +553,125 @@ func TestParseNaturalPatterns(t *testing.T) {
 		wholeWord   bool
 		cmdType     string // "show" or "delete"
 	}{
-		{"show lines starting with", "show lines starting with #", "#", ast.PatternStartsWith, false, false, "show"},
-		{"show lines starting with (with)", "show lines starting with foo", "foo", ast.PatternStartsWith, false, false, "show"},
-		{"show lines ending with", "show lines ending with ;", ";", ast.PatternEndsWith, false, false, "show"},
-		{"show lines containing", "show lines containing error", "error", ast.PatternContains, false, false, "show"},
-		{"delete lines starting with", "delete lines starting with #", "#", ast.PatternStartsWith, false, false, "delete"},
-		{"delete lines ending with", "delete lines ending with ;", ";", ast.PatternEndsWith, false, false, "delete"},
-		{"delete lines containing", "delete lines containing debug", "debug", ast.PatternContains, false, false, "delete"},
+		{
+			"show lines starting with",
+			"show lines starting with #",
+			"#",
+			ast.PatternStartsWith,
+			false,
+			false,
+			"show",
+		},
+		{
+			"show lines starting with (with)",
+			"show lines starting with foo",
+			"foo",
+			ast.PatternStartsWith,
+			false,
+			false,
+			"show",
+		},
+		{
+			"show lines ending with",
+			"show lines ending with ;",
+			";",
+			ast.PatternEndsWith,
+			false,
+			false,
+			"show",
+		},
+		{
+			"show lines containing",
+			"show lines containing error",
+			"error",
+			ast.PatternContains,
+			false,
+			false,
+			"show",
+		},
+		{
+			"delete lines starting with",
+			"delete lines starting with #",
+			"#",
+			ast.PatternStartsWith,
+			false,
+			false,
+			"delete",
+		},
+		{
+			"delete lines ending with",
+			"delete lines ending with ;",
+			";",
+			ast.PatternEndsWith,
+			false,
+			false,
+			"delete",
+		},
+		{
+			"delete lines containing",
+			"delete lines containing debug",
+			"debug",
+			ast.PatternContains,
+			false,
+			false,
+			"delete",
+		},
 		// Negated patterns
-		{"show lines not starting with", "show lines not starting with #", "#", ast.PatternStartsWith, true, false, "show"},
-		{"show lines not ending with", "show lines not ending with ;", ";", ast.PatternEndsWith, true, false, "show"},
-		{"show lines not containing", "show lines not containing error", "error", ast.PatternContains, true, false, "show"},
-		{"delete lines not containing", "delete lines not containing debug", "debug", ast.PatternContains, true, false, "delete"},
+		{
+			"show lines not starting with",
+			"show lines not starting with #",
+			"#",
+			ast.PatternStartsWith,
+			true,
+			false,
+			"show",
+		},
+		{
+			"show lines not ending with",
+			"show lines not ending with ;",
+			";",
+			ast.PatternEndsWith,
+			true,
+			false,
+			"show",
+		},
+		{
+			"show lines not containing",
+			"show lines not containing error",
+			"error",
+			ast.PatternContains,
+			true,
+			false,
+			"show",
+		},
+		{
+			"delete lines not containing",
+			"delete lines not containing debug",
+			"debug",
+			ast.PatternContains,
+			true,
+			false,
+			"delete",
+		},
 		// Whole word patterns
-		{"show lines containing whole word", "show lines containing whole word cat", "cat", ast.PatternContains, false, true, "show"},
-		{"delete lines containing whole word", "delete lines containing whole word dog", "dog", ast.PatternContains, false, true, "delete"},
+		{
+			"show lines containing whole word",
+			"show lines containing whole word cat",
+			"cat",
+			ast.PatternContains,
+			false,
+			true,
+			"show",
+		},
+		{
+			"delete lines containing whole word",
+			"delete lines containing whole word dog",
+			"dog",
+			ast.PatternContains,
+			false,
+			true,
+			"delete",
+		},
 	}
 
 	for _, tt := range tests {
@@ -659,7 +767,11 @@ func TestParseTransformErrors(t *testing.T) {
 			}
 
 			if !strings.Contains(illegal.Message, tt.expectedContain) {
-				t.Errorf("expected message to contain %q, got %q", tt.expectedContain, illegal.Message)
+				t.Errorf(
+					"expected message to contain %q, got %q",
+					tt.expectedContain,
+					illegal.Message,
+				)
 			}
 		})
 	}
@@ -739,7 +851,12 @@ func TestParseCompound(t *testing.T) {
 				}
 
 				if compoundCmd.Commands[i].TokenLiteral() != expectedType {
-					t.Errorf("command %d: expected %s, got %s", i, expectedType, compoundCmd.Commands[i].TokenLiteral())
+					t.Errorf(
+						"command %d: expected %s, got %s",
+						i,
+						expectedType,
+						compoundCmd.Commands[i].TokenLiteral(),
+					)
 				}
 			}
 		})
@@ -776,7 +893,11 @@ func TestParseCompoundErrors(t *testing.T) {
 			}
 
 			if !strings.Contains(illegal.Message, tt.expectedContain) {
-				t.Errorf("expected message to contain %q, got %q", tt.expectedContain, illegal.Message)
+				t.Errorf(
+					"expected message to contain %q, got %q",
+					tt.expectedContain,
+					illegal.Message,
+				)
 			}
 		})
 	}

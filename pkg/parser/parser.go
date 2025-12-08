@@ -17,9 +17,11 @@ type Parser struct {
 func (p *Parser) makeError(format string, args ...interface{}) *ast.Illegal {
 	return &ast.Illegal{
 		Identifier: p.curToken.Literal,
-		Message:    fmt.Sprintf("line %d, column %d: "+format, append([]interface{}{p.curToken.Pos.Line, p.curToken.Pos.Column}, args...)...),
-		Line:       p.curToken.Pos.Line,
-		Column:     p.curToken.Pos.Column,
+		Message: fmt.Sprintf(
+			"line %d, column %d: "+format,
+			append([]interface{}{p.curToken.Pos.Line, p.curToken.Pos.Column}, args...)...),
+		Line:   p.curToken.Pos.Line,
+		Column: p.curToken.Pos.Column,
 	}
 }
 
@@ -92,9 +94,14 @@ func (p *Parser) parseSingleCommand() ast.Command {
 	case lexer.COUNT:
 		return p.parseCount()
 	case lexer.EOF:
-		return p.makeError("empty input, expected a command (replace, delete, show, insert, convert, count)")
+		return p.makeError(
+			"empty input, expected a command (replace, delete, show, insert, convert, count)",
+		)
 	default:
-		return p.makeError("unknown command %q, expected replace, delete, show, insert, convert, or count", p.curToken.Literal)
+		return p.makeError(
+			"unknown command %q, expected replace, delete, show, insert, convert, or count",
+			p.curToken.Literal,
+		)
 	}
 }
 
@@ -163,7 +170,13 @@ func (p *Parser) parseDelete() ast.Command {
 		if p.curToken.Type == lexer.LINES {
 			patternType, target, isRegex, negated, wholeWord, ok := p.parseNaturalPattern()
 			if ok {
-				return &ast.DeleteCommand{Target: target, IsRegex: isRegex, PatternType: patternType, Negated: negated, WholeWord: wholeWord}
+				return &ast.DeleteCommand{
+					Target:      target,
+					IsRegex:     isRegex,
+					PatternType: patternType,
+					Negated:     negated,
+					WholeWord:   wholeWord,
+				}
 			}
 		}
 
@@ -219,7 +232,13 @@ func (p *Parser) parseShow() ast.Command {
 		if p.curToken.Type == lexer.LINES {
 			patternType, target, isRegex, negated, wholeWord, ok := p.parseNaturalPattern()
 			if ok {
-				return &ast.ShowCommand{Target: target, IsRegex: isRegex, PatternType: patternType, Negated: negated, WholeWord: wholeWord}
+				return &ast.ShowCommand{
+					Target:      target,
+					IsRegex:     isRegex,
+					PatternType: patternType,
+					Negated:     negated,
+					WholeWord:   wholeWord,
+				}
 			}
 		}
 
@@ -353,13 +372,19 @@ func (p *Parser) parseInsert() ast.Command {
 
 		return &ast.InsertCommand{Text: text, Position: position, Reference: ""}
 	default:
-		return p.makeError("expected 'before', 'after', 'first', or 'last' in insert command, got %q", p.curToken.Literal)
+		return p.makeError(
+			"expected 'before', 'after', 'first', or 'last' in insert command, got %q",
+			p.curToken.Literal,
+		)
 	}
 
 	p.nextToken()
 
 	if p.curToken.Type == lexer.EOF {
-		return p.makeError("expected reference pattern after '%s'", map[ast.InsertPosition]string{ast.InsertBefore: "before", ast.InsertAfter: "after"}[position])
+		return p.makeError(
+			"expected reference pattern after '%s'",
+			map[ast.InsertPosition]string{ast.InsertBefore: "before", ast.InsertAfter: "after"}[position],
+		)
 	}
 
 	reference := p.curToken.Literal
@@ -392,13 +417,16 @@ func (p *Parser) parseTransform() ast.Command {
 		case lexer.TITLECASE:
 			return &ast.TransformCommand{Type: ast.TransformTitlecase}
 		default:
-			return p.makeError("expected 'uppercase', 'lowercase', or 'titlecase' after 'convert to'")
+			return p.makeError(
+				"expected 'uppercase', 'lowercase', or 'titlecase' after 'convert to'",
+			)
 		}
 
 	case lexer.TRIM:
 		p.nextToken()
 
-		if p.curToken.Type == lexer.WHITESPACE || p.curToken.Type == lexer.EOF || p.curToken.Type == lexer.THEN {
+		if p.curToken.Type == lexer.WHITESPACE || p.curToken.Type == lexer.EOF ||
+			p.curToken.Type == lexer.THEN {
 			return &ast.TransformCommand{Type: ast.TransformTrim}
 		}
 
@@ -411,7 +439,8 @@ func (p *Parser) parseTransform() ast.Command {
 		case lexer.TRAILING:
 			p.nextToken()
 
-			if p.curToken.Type == lexer.SPACES || p.curToken.Type == lexer.WHITESPACE || p.curToken.Type == lexer.EOF {
+			if p.curToken.Type == lexer.SPACES || p.curToken.Type == lexer.WHITESPACE ||
+				p.curToken.Type == lexer.EOF {
 				return &ast.TransformCommand{Type: ast.TransformTrimTrailing}
 			}
 
@@ -419,7 +448,8 @@ func (p *Parser) parseTransform() ast.Command {
 		case lexer.LEADING:
 			p.nextToken()
 
-			if p.curToken.Type == lexer.SPACES || p.curToken.Type == lexer.WHITESPACE || p.curToken.Type == lexer.EOF {
+			if p.curToken.Type == lexer.SPACES || p.curToken.Type == lexer.WHITESPACE ||
+				p.curToken.Type == lexer.EOF {
 				return &ast.TransformCommand{Type: ast.TransformTrimLeading}
 			}
 

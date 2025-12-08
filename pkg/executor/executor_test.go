@@ -696,7 +696,11 @@ func TestExecuteShowPatternTypes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cmd := &ast.ShowCommand{Target: tt.target, PatternType: tt.patternType, Negated: tt.negated}
+			cmd := &ast.ShowCommand{
+				Target:      tt.target,
+				PatternType: tt.patternType,
+				Negated:     tt.negated,
+			}
 			input := strings.NewReader(tt.input)
 			var output bytes.Buffer
 
