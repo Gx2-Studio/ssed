@@ -1,0 +1,278 @@
+SSED EXAMPLES
+=============
+
+A comprehensive guide to using ssed (Simple sed) with practical examples.
+
+
+BASIC REPLACE
+-------------
+
+Replace text in a stream or file:
+
+    echo "hello world" | ssed "replace world with universe"
+    Output: hello universe
+
+    echo "say hello to the world" | ssed "replace 'hello' with 'goodbye'"
+    Output: say goodbye to the world
+
+    echo "hello world" | ssed "replace ' world' with ''"
+    Output: hello
+
+
+REGEX REPLACE
+-------------
+
+Use /pattern/ syntax for regular expressions:
+
+    echo "order-123 and order-456" | ssed "replace /[0-9]+/ with NUM"
+    Output: order-NUM and order-NUM
+
+    echo "error: something failed" | ssed "replace /^error:/ with 'warning:'"
+    Output: warning: something failed
+
+
+DELETE LINES
+------------
+
+Remove lines containing a pattern:
+
+    echo -e "error: failed\ninfo: ok\nerror: again" | ssed "delete error"
+    Output: info: ok
+
+    echo -e "# comment\ncode here\n# another" | ssed "delete lines starting with '#'"
+    Output: code here
+
+    echo -e "line one;\nline two\nline three;" | ssed "delete lines ending with ';'"
+    Output: line two
+
+    echo -e "important: keep\ndelete this\nimportant: also keep" | ssed "delete lines not containing important"
+    Output:
+        important: keep
+        important: also keep
+
+
+DELETE BY LINE NUMBER
+---------------------
+
+    echo -e "line 1\nline 2\nline 3" | ssed "delete line 2"
+    Output:
+        line 1
+        line 3
+
+    echo -e "line 1\nline 2\nline 3\nline 4\nline 5" | ssed "delete lines 2 to 4"
+    Output:
+        line 1
+        line 5
+
+    echo -e "line 1\nline 2\nline 3\nline 4" | ssed "delete first 2 lines"
+    Output:
+        line 3
+        line 4
+
+    echo -e "line 1\nline 2\nline 3\nline 4" | ssed "delete last 2 lines"
+    Output:
+        line 1
+        line 2
+
+
+SHOW LINES (FILTER)
+-------------------
+
+Display only lines matching a pattern:
+
+    echo -e "error: failed\ninfo: ok\nerror: again" | ssed "show error"
+    Output:
+        error: failed
+        error: again
+
+    echo -e "# comment\ncode here\n# another" | ssed "show lines starting with '#'"
+    Output:
+        # comment
+        # another
+
+    echo -e "line one;\nline two\nline three;" | ssed "show lines ending with ';'"
+    Output:
+        line one;
+        line three;
+
+    echo -e "keep this\nerror here\nkeep that" | ssed "show lines not containing error"
+    Output:
+        keep this
+        keep that
+
+
+SHOW BY LINE NUMBER
+-------------------
+
+    echo -e "line 1\nline 2\nline 3" | ssed "show line 2"
+    Output: line 2
+
+    echo -e "line 1\nline 2\nline 3\nline 4\nline 5" | ssed "show lines 2 to 4"
+    Output:
+        line 2
+        line 3
+        line 4
+
+    echo -e "line 1\nline 2\nline 3\nline 4" | ssed "show first 2 lines"
+    Output:
+        line 1
+        line 2
+
+    echo -e "line 1\nline 2\nline 3\nline 4" | ssed "show last 2 lines"
+    Output:
+        line 3
+        line 4
+
+    echo -e "first\nsecond\nthird" | ssed "show line numbers"
+    Output:
+             1  first
+             2  second
+             3  third
+
+
+WHOLE WORD MATCHING
+-------------------
+
+Match complete words only (not substrings):
+
+    Without whole word - matches "cat" in "catalog":
+    echo -e "the cat sat\ncatalog here\nthe cat meows" | ssed "show cat"
+    Output:
+        the cat sat
+        catalog here
+        the cat meows
+
+    With whole word - only matches "cat" as a word:
+    echo -e "the cat sat\ncatalog here\nthe cat meows" | ssed "show lines containing whole word cat"
+    Output:
+        the cat sat
+        the cat meows
+
+
+INSERT TEXT
+-----------
+
+Add new lines before or after patterns:
+
+    echo -e "line 1\nline 2\nline 3" | ssed "insert 'NEW' before 'line 2'"
+    Output:
+        line 1
+        NEW
+        line 2
+        line 3
+
+    echo -e "line 1\nline 2\nline 3" | ssed "insert 'NEW' after 'line 2'"
+    Output:
+        line 1
+        line 2
+        NEW
+        line 3
+
+    echo -e "line 1\nline 2" | ssed "insert 'HEADER' first"
+    Output:
+        HEADER
+        line 1
+        line 2
+
+    echo -e "line 1\nline 2" | ssed "insert 'FOOTER' last"
+    Output:
+        line 1
+        line 2
+        FOOTER
+
+
+TRANSFORM TEXT
+--------------
+
+Change case and trim whitespace:
+
+    echo "hello world" | ssed "convert to uppercase"
+    Output: HELLO WORLD
+
+    echo "HELLO WORLD" | ssed "convert to lowercase"
+    Output: hello world
+
+    echo "hello world goodbye" | ssed "convert to titlecase"
+    Output: Hello World Goodbye
+
+    echo "   hello world   " | ssed "trim"
+    Output: hello world
+
+    echo "   hello world   " | ssed "remove leading spaces"
+    Output: hello world
+
+    echo "   hello world   " | ssed "remove trailing spaces"
+    Output:    hello world
+
+
+COUNT LINES
+-----------
+
+Count lines matching a pattern:
+
+    echo -e "error here\nall good\nerror again\nfine" | ssed "count lines containing error"
+    Output: 2
+
+    echo -e "line 1\nline 2\nno number here" | ssed "count /[0-9]+/"
+    Output: 2
+
+
+COMPOUND OPERATIONS
+-------------------
+
+Chain multiple operations with "then":
+
+    echo -e "# comment\nvalue=old\n# another\ndata=old" | ssed "delete lines starting with '#' then replace old with new"
+    Output:
+        value=new
+        data=new
+
+    echo -e "  hello world  \n  goodbye world  " | ssed "trim then convert to uppercase"
+    Output:
+        HELLO WORLD
+        GOODBYE WORLD
+
+    echo -e "  # COMMENT  \n  HELLO WORLD  \n  # ANOTHER  \n  GOODBYE  " | ssed "trim then delete lines starting with '#' then convert to lowercase"
+    Output:
+        hello world
+        goodbye
+
+
+WORKING WITH FILES
+------------------
+
+    ssed "replace foo with bar" input.txt
+
+    ssed "replace foo with bar" input.txt --preview
+
+    ssed -i "replace foo with bar" input.txt
+
+    ssed --backup .bak "replace foo with bar" input.txt
+
+
+REAL-WORLD EXAMPLES
+-------------------
+
+Log files:
+
+    ssed "show lines starting with 'ERROR'" app.log
+    ssed "delete lines containing DEBUG" app.log
+    ssed "count lines containing ERROR" app.log
+
+Configuration files:
+
+    ssed "delete lines starting with '#'" config.txt
+    ssed "replace 'debug=true' with 'debug=false'" config.txt
+    ssed "delete lines starting with '#' then trim" config.txt
+
+Data transformation:
+
+    ssed "convert to lowercase" data.csv
+    ssed "trim then delete lines starting with '#'" data.txt
+    ssed "show lines 10 to 20" large_file.txt
+
+Code cleanup:
+
+    ssed "remove trailing spaces" code.py
+    ssed "show TODO" *.py
+    ssed "count TODO" *.py

@@ -1,0 +1,12 @@
+linters:
+  enable:
+    - wsl
+    - gofumpt
+
+linters-settings:
+  wsl:
+    force-err-cuddling: false
+    allow-cuddle-declarations: true
+    allow-trailing-comment: true
+    force-short-decl-cuddling: false
+    strict-append: false
