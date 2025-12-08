@@ -1,0 +1,53 @@
+project_name: ssed
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - main: ./cmd/ssed
+    binary: ssed
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - format: tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        format: zip
+
+brews:
+  - repository:
+      owner: Gx2-Studio
+      name: homebrew-tap
+    homepage: "https://github.com/Gx2-Studio/ssed"
+    description: "Simple sed - text transformation in plain English"
+    license: "MIT"
+
+nfpms:
+  - package_name: ssed
+    homepage: "https://github.com/Gx2-Studio/ssed"
+    description: "Simple sed - text transformation in plain English"
+    license: "MIT"
+    formats:
+      - deb
+      - rpm
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+
+release:
+  github:
+    owner: Gx2-Studio
+    name: ssed
