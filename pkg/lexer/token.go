@@ -8,9 +8,6 @@ const (
 	INSERT     TokenType = "INSERT"
 	SHOW       TokenType = "SHOW"
 	WITH       TokenType = "WITH"
-	IN         TokenType = "IN"
-	FROM       TokenType = "FROM"
-	ALL        TokenType = "ALL"
 	FIRST      TokenType = "FIRST"
 	LAST       TokenType = "LAST"
 	BEFORE     TokenType = "BEFORE"
@@ -18,7 +15,6 @@ const (
 	LINE       TokenType = "LINE"
 	LINES      TokenType = "LINES"
 	TO         TokenType = "TO"
-	TRANSFORM  TokenType = "TRANSFORM"
 	CONVERT    TokenType = "CONVERT"
 	UPPERCASE  TokenType = "UPPERCASE"
 	LOWERCASE  TokenType = "LOWERCASE"
@@ -33,13 +29,9 @@ const (
 	CONTAINING TokenType = "CONTAINING"
 	STARTING   TokenType = "STARTING"
 	ENDING     TokenType = "ENDING"
-	BETWEEN    TokenType = "BETWEEN"
-	AND        TokenType = "AND"
 	NOT        TokenType = "NOT"
 	WHOLE      TokenType = "WHOLE"
 	WORD       TokenType = "WORD"
-	STOP       TokenType = "STOP"
-	AT         TokenType = "AT"
 	NUMBERS    TokenType = "NUMBERS"
 	THEN       TokenType = "THEN"
 
@@ -59,9 +51,6 @@ var keywords = map[string]TokenType{
 	"insert":     INSERT,
 	"show":       SHOW,
 	"with":       WITH,
-	"in":         IN,
-	"from":       FROM,
-	"all":        ALL,
 	"first":      FIRST,
 	"last":       LAST,
 	"before":     BEFORE,
@@ -69,7 +58,6 @@ var keywords = map[string]TokenType{
 	"line":       LINE,
 	"lines":      LINES,
 	"to":         TO,
-	"transform":  TRANSFORM,
 	"convert":    CONVERT,
 	"uppercase":  UPPERCASE,
 	"lowercase":  LOWERCASE,
@@ -84,13 +72,9 @@ var keywords = map[string]TokenType{
 	"containing": CONTAINING,
 	"starting":   STARTING,
 	"ending":     ENDING,
-	"between":    BETWEEN,
-	"and":        AND,
 	"not":        NOT,
 	"whole":      WHOLE,
 	"word":       WORD,
-	"stop":       STOP,
-	"at":         AT,
 	"numbers":    NUMBERS,
 	"then":       THEN,
 }
