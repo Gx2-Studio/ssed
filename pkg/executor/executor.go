@@ -2,7 +2,6 @@ package executor
 
 import (
 	"bufio"
-	"bytes"
 	"fmt"
 	"io"
 	"regexp"
@@ -42,25 +41,41 @@ func executeCompound(cmd *ast.CompoundCommand, input io.Reader, output io.Writer
 		return Execute(cmd.Commands[0], input, output)
 	}
 
-	currentInput := input
+	numPipes := len(cmd.Commands) - 1
+	pipes := make([]*io.PipeWriter, numPipes)
+	readers := make([]*io.PipeReader, numPipes)
 
-	for i, subCmd := range cmd.Commands {
-		isLast := i == len(cmd.Commands)-1
-
-		if isLast {
-			return Execute(subCmd, currentInput, output)
-		}
-
-		var buf bytes.Buffer
-
-		if err := Execute(subCmd, currentInput, &buf); err != nil {
-			return err
-		}
-
-		currentInput = &buf
+	for i := 0; i < numPipes; i++ {
+		readers[i], pipes[i] = io.Pipe()
 	}
 
-	return nil
+	errChan := make(chan error, len(cmd.Commands))
+
+	for i := 0; i < numPipes; i++ {
+		go func(idx int) {
+			var cmdInput io.Reader
+			if idx == 0 {
+				cmdInput = input
+			} else {
+				cmdInput = readers[idx-1]
+			}
+
+			err := Execute(cmd.Commands[idx], cmdInput, pipes[idx])
+			pipes[idx].CloseWithError(err)
+			errChan <- err
+		}(i)
+	}
+
+	lastInput := readers[numPipes-1]
+	lastErr := Execute(cmd.Commands[numPipes], lastInput, output)
+
+	for i := 0; i < numPipes; i++ {
+		if err := <-errChan; err != nil {
+			return err
+		}
+	}
+
+	return lastErr
 }
 
 func executeReplace(cmd *ast.ReplaceCommand, input io.Reader, output io.Writer) error {
