@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -178,7 +179,7 @@ func runQuery(cmd *cobra.Command, args []string) error {
 				}
 			}
 
-			if err := os.WriteFile(filenames[idx], []byte(outputBuf.String()), 0o644); err != nil {
+			if err := atomicWriteFile(filenames[idx], []byte(outputBuf.String())); err != nil {
 				return fmt.Errorf("error writing file %s: %w", filenames[idx], err)
 			}
 
@@ -210,4 +211,43 @@ func copyFile(src, dst string) error {
 	_, err = io.Copy(destination, buf)
 
 	return err
+}
+
+func atomicWriteFile(filename string, data []byte) error {
+	info, err := os.Stat(filename)
+	if err != nil {
+		return err
+	}
+
+	dir := filepath.Dir(filename)
+
+	tempFile, err := os.CreateTemp(dir, ".ssed-*")
+	if err != nil {
+		return err
+	}
+
+	tempName := tempFile.Name()
+
+	defer func() {
+		if tempFile != nil {
+			tempFile.Close()
+			os.Remove(tempName)
+		}
+	}()
+
+	if _, err := tempFile.Write(data); err != nil {
+		return err
+	}
+
+	if err := tempFile.Chmod(info.Mode()); err != nil {
+		return err
+	}
+
+	if err := tempFile.Close(); err != nil {
+		return err
+	}
+
+	tempFile = nil
+
+	return os.Rename(tempName, filename)
 }
