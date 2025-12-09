@@ -109,6 +109,13 @@ func (lexer *Lexer) readString() string {
 	lexer.readChar()
 
 	for lexer.character != openingChar && lexer.character != byte(0) {
+		if lexer.character == '\\' {
+			next := lexer.peekChar()
+			if next == openingChar || next == '\\' {
+				lexer.readChar()
+			}
+		}
+
 		str = str + string(lexer.character)
 		lexer.readChar()
 	}

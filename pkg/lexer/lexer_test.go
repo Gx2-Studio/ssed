@@ -91,6 +91,24 @@ func TestNextToken(t *testing.T) {
 				{Type: EOF, Literal: ""},
 			},
 		},
+		{
+			"escaped double quote in string", `"foo \"bar\" baz"`, []Token{
+				{Type: STRING, Literal: `foo "bar" baz`},
+				{Type: EOF, Literal: ""},
+			},
+		},
+		{
+			"escaped single quote in string", `'foo \'bar\' baz'`, []Token{
+				{Type: STRING, Literal: `foo 'bar' baz`},
+				{Type: EOF, Literal: ""},
+			},
+		},
+		{
+			"escaped backslash in string", `"foo \\ bar"`, []Token{
+				{Type: STRING, Literal: `foo \ bar`},
+				{Type: EOF, Literal: ""},
+			},
+		},
 	}
 
 	for _, test := range tests {
