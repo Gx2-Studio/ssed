@@ -59,6 +59,27 @@ func (r *ringBuffer) lines() []string {
 	return result
 }
 
+// lineWriter provides buffered output & line+"\n" string concat overhead
+type lineWriter struct {
+	bw *bufio.Writer
+}
+
+func newLineWriter(output io.Writer) *lineWriter {
+	return &lineWriter{bw: bufio.NewWriterSize(output, 64*1024)}
+}
+
+func (w *lineWriter) writeLine(line string) error {
+	if _, err := w.bw.WriteString(line); err != nil {
+		return err
+	}
+
+	return w.bw.WriteByte('\n')
+}
+
+func (w *lineWriter) flush() error {
+	return w.bw.Flush()
+}
+
 func Execute(cmd ast.Command, input io.Reader, output io.Writer) error {
 	switch command := cmd.(type) {
 	case *ast.ReplaceCommand:
@@ -128,6 +149,7 @@ func executeCompound(cmd *ast.CompoundCommand, input io.Reader, output io.Writer
 
 func executeReplace(cmd *ast.ReplaceCommand, input io.Reader, output io.Writer) error {
 	scanner := newScanner(input)
+	lw := newLineWriter(output)
 
 	var re *regexp.Regexp
 
@@ -149,30 +171,38 @@ func executeReplace(cmd *ast.ReplaceCommand, input io.Reader, output io.Writer) 
 			line = strings.ReplaceAll(line, cmd.Source, cmd.Replacement)
 		}
 
-		_, err := io.WriteString(output, line+"\n")
-		if err != nil {
+		if err := lw.writeLine(line); err != nil {
 			return err
 		}
 	}
 
-	return scanner.Err()
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+
+	return lw.flush()
 }
 
 func executeDelete(cmd *ast.DeleteCommand, input io.Reader, output io.Writer) error {
 	scanner := newScanner(input)
+	lw := newLineWriter(output)
 
 	if cmd.LastN > 0 {
 		ring := newRingBuffer(cmd.LastN)
 
 		for scanner.Scan() {
 			if evicted, ok := ring.push(scanner.Text()); ok {
-				if _, err := io.WriteString(output, evicted+"\n"); err != nil {
+				if err := lw.writeLine(evicted); err != nil {
 					return err
 				}
 			}
 		}
 
-		return scanner.Err()
+		if err := scanner.Err(); err != nil {
+			return err
+		}
+
+		return lw.flush()
 	}
 
 	lineNum := 0
@@ -186,6 +216,11 @@ func executeDelete(cmd *ast.DeleteCommand, input io.Reader, output io.Writer) er
 		if err != nil {
 			return err
 		}
+	}
+
+	var wholeWordRe *regexp.Regexp
+	if cmd.WholeWord && !cmd.IsRegex && cmd.Target != "" {
+		wholeWordRe = regexp.MustCompile(`\b` + regexp.QuoteMeta(cmd.Target) + `\b`)
 	}
 
 	for scanner.Scan() {
@@ -207,7 +242,7 @@ func executeDelete(cmd *ast.DeleteCommand, input io.Reader, output io.Writer) er
 				}
 			}
 		} else if cmd.Target != "" {
-			match := matchPattern(line, cmd.Target, cmd.IsRegex, cmd.PatternType, cmd.WholeWord, re)
+			match := matchPattern(line, cmd.Target, cmd.IsRegex, cmd.PatternType, cmd.WholeWord, re, wholeWordRe)
 			if cmd.Negated {
 				match = !match
 			}
@@ -217,17 +252,21 @@ func executeDelete(cmd *ast.DeleteCommand, input io.Reader, output io.Writer) er
 			}
 		}
 
-		_, err := io.WriteString(output, line+"\n")
-		if err != nil {
+		if err := lw.writeLine(line); err != nil {
 			return err
 		}
 	}
 
-	return scanner.Err()
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+
+	return lw.flush()
 }
 
 func executeShow(cmd *ast.ShowCommand, input io.Reader, output io.Writer) error {
 	scanner := newScanner(input)
+	lw := newLineWriter(output)
 
 	if cmd.LastN > 0 {
 		ring := newRingBuffer(cmd.LastN)
@@ -241,12 +280,12 @@ func executeShow(cmd *ast.ShowCommand, input io.Reader, output io.Writer) error 
 		}
 
 		for _, line := range ring.lines() {
-			if _, err := io.WriteString(output, line+"\n"); err != nil {
+			if err := lw.writeLine(line); err != nil {
 				return err
 			}
 		}
 
-		return nil
+		return lw.flush()
 	}
 
 	lineNum := 0
@@ -262,13 +301,17 @@ func executeShow(cmd *ast.ShowCommand, input io.Reader, output io.Writer) error 
 		}
 	}
 
+	var wholeWordRe *regexp.Regexp
+	if cmd.WholeWord && !cmd.IsRegex && cmd.Target != "" {
+		wholeWordRe = regexp.MustCompile(`\b` + regexp.QuoteMeta(cmd.Target) + `\b`)
+	}
+
 	for scanner.Scan() {
 		lineNum++
 		line := scanner.Text()
 
 		if cmd.ShowLineNumbers {
-			_, err := fmt.Fprintf(output, "%6d\t%s\n", lineNum, line)
-			if err != nil {
+			if _, err := fmt.Fprintf(lw.bw, "%6d\t%s\n", lineNum, line); err != nil {
 				return err
 			}
 
@@ -277,7 +320,7 @@ func executeShow(cmd *ast.ShowCommand, input io.Reader, output io.Writer) error 
 
 		if cmd.FirstN > 0 {
 			if lineNum <= cmd.FirstN {
-				if _, err := io.WriteString(output, line+"\n"); err != nil {
+				if err := lw.writeLine(line); err != nil {
 					return err
 				}
 			}
@@ -296,7 +339,7 @@ func executeShow(cmd *ast.ShowCommand, input io.Reader, output io.Writer) error 
 				}
 			}
 		} else if cmd.Target != "" {
-			match := matchPattern(line, cmd.Target, cmd.IsRegex, cmd.PatternType, cmd.WholeWord, re)
+			match := matchPattern(line, cmd.Target, cmd.IsRegex, cmd.PatternType, cmd.WholeWord, re, wholeWordRe)
 			if cmd.Negated {
 				match = !match
 			}
@@ -306,13 +349,16 @@ func executeShow(cmd *ast.ShowCommand, input io.Reader, output io.Writer) error 
 			}
 		}
 
-		_, err := io.WriteString(output, line+"\n")
-		if err != nil {
+		if err := lw.writeLine(line); err != nil {
 			return err
 		}
 	}
 
-	return scanner.Err()
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+
+	return lw.flush()
 }
 
 func matchPattern(
@@ -321,12 +367,17 @@ func matchPattern(
 	patternType ast.PatternType,
 	wholeWord bool,
 	re *regexp.Regexp,
+	wholeWordRe *regexp.Regexp,
 ) bool {
 	if isRegex {
 		return re.MatchString(line)
 	}
 
 	if wholeWord {
+		if wholeWordRe != nil {
+			return wholeWordRe.MatchString(line)
+		}
+		// Fallback (should not happen if caller pre-compiles)
 		pattern := `\b` + regexp.QuoteMeta(target) + `\b`
 		matched, _ := regexp.MatchString(pattern, line)
 
@@ -345,6 +396,8 @@ func matchPattern(
 
 func executeInsert(cmd *ast.InsertCommand, input io.Reader, output io.Writer) error {
 	scanner := newScanner(input)
+	lw := newLineWriter(output)
+
 	var lines []string
 
 	for scanner.Scan() {
@@ -356,40 +409,41 @@ func executeInsert(cmd *ast.InsertCommand, input io.Reader, output io.Writer) er
 	}
 
 	if cmd.Position == ast.InsertPrepend {
-		if _, err := io.WriteString(output, cmd.Text+"\n"); err != nil {
+		if err := lw.writeLine(cmd.Text); err != nil {
 			return err
 		}
 	}
 
 	for _, line := range lines {
 		if cmd.Position == ast.InsertBefore && strings.Contains(line, cmd.Reference) {
-			if _, err := io.WriteString(output, cmd.Text+"\n"); err != nil {
+			if err := lw.writeLine(cmd.Text); err != nil {
 				return err
 			}
 		}
 
-		if _, err := io.WriteString(output, line+"\n"); err != nil {
+		if err := lw.writeLine(line); err != nil {
 			return err
 		}
 
 		if cmd.Position == ast.InsertAfter && strings.Contains(line, cmd.Reference) {
-			if _, err := io.WriteString(output, cmd.Text+"\n"); err != nil {
+			if err := lw.writeLine(cmd.Text); err != nil {
 				return err
 			}
 		}
 	}
 
 	if cmd.Position == ast.InsertAppend {
-		if _, err := io.WriteString(output, cmd.Text+"\n"); err != nil {
+		if err := lw.writeLine(cmd.Text); err != nil {
 			return err
 		}
 	}
 
-	return nil
+	return lw.flush()
 }
 
 func executeTransform(cmd *ast.TransformCommand, input io.Reader, output io.Writer) error {
 	scanner := newScanner(input)
+	lw := newLineWriter(output)
 
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -409,12 +463,16 @@ func executeTransform(cmd *ast.TransformCommand, input io.Reader, output io.Writ
 			line = strings.TrimRightFunc(line, unicode.IsSpace)
 		}
 
-		if _, err := io.WriteString(output, line+"\n"); err != nil {
+		if err := lw.writeLine(line); err != nil {
 			return err
 		}
 	}
 
-	return scanner.Err()
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+
+	return lw.flush()
 }
 
 func toTitleCase(s string) string {

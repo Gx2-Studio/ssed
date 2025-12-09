@@ -1,6 +1,7 @@
 package lexer
 
 import (
+	"strings"
 	"unicode"
 )
 
@@ -91,18 +92,18 @@ func (lexer *Lexer) skipWhitespace() {
 }
 
 func (lexer *Lexer) readIdentifier() string {
-	var ident string
+	var b strings.Builder
 
 	for unicode.IsLetter(rune(lexer.character)) {
-		ident = ident + string(lexer.character)
+		b.WriteByte(lexer.character)
 		lexer.readChar()
 	}
 
-	return ident
+	return b.String()
 }
 
 func (lexer *Lexer) readString() string {
-	var str string
+	var b strings.Builder
 
 	openingChar := lexer.character
 
@@ -116,53 +117,53 @@ func (lexer *Lexer) readString() string {
 			}
 		}
 
-		str = str + string(lexer.character)
+		b.WriteByte(lexer.character)
 		lexer.readChar()
 	}
 
 	lexer.readChar()
 
-	return str
+	return b.String()
 }
 
 func (lexer *Lexer) readNumber() string {
-	var nbr string
+	var b strings.Builder
 
-	for (unicode.IsDigit(rune(lexer.character))) && lexer.character != byte(0) {
-		nbr = nbr + string(lexer.character)
+	for unicode.IsDigit(rune(lexer.character)) && lexer.character != byte(0) {
+		b.WriteByte(lexer.character)
 		lexer.readChar()
 	}
 
 	if lexer.character == '.' && unicode.IsDigit(rune(lexer.peekChar())) {
-		nbr = nbr + "."
+		b.WriteByte('.')
 
 		lexer.readChar()
 
-		for (unicode.IsDigit(rune(lexer.character))) && lexer.character != byte(0) {
-			nbr = nbr + string(lexer.character)
+		for unicode.IsDigit(rune(lexer.character)) && lexer.character != byte(0) {
+			b.WriteByte(lexer.character)
 			lexer.readChar()
 		}
 	}
 
-	return nbr
+	return b.String()
 }
 
 func (lexer *Lexer) readRegex() string {
-	var pattern string
+	var b strings.Builder
 
 	lexer.readChar()
 
 	for lexer.character != '/' && lexer.character != byte(0) {
 		if lexer.character == '\\' && lexer.peekChar() == '/' {
-			pattern = pattern + string(lexer.character)
+			b.WriteByte(lexer.character)
 			lexer.readChar()
 		}
 
-		pattern = pattern + string(lexer.character)
+		b.WriteByte(lexer.character)
 		lexer.readChar()
 	}
 
 	lexer.readChar()
 
-	return pattern
+	return b.String()
 }
