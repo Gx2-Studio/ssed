@@ -11,6 +11,15 @@ import (
 	"github.com/Gx2-Studio/ssed/pkg/ast"
 )
 
+const maxScanTokenSize = 10 * 1024 * 1024
+
+func newScanner(input io.Reader) *bufio.Scanner {
+	scanner := bufio.NewScanner(input)
+	scanner.Buffer(make([]byte, 64*1024), maxScanTokenSize)
+
+	return scanner
+}
+
 func Execute(cmd ast.Command, input io.Reader, output io.Writer) error {
 	switch command := cmd.(type) {
 	case *ast.ReplaceCommand:
@@ -79,7 +88,7 @@ func executeCompound(cmd *ast.CompoundCommand, input io.Reader, output io.Writer
 }
 
 func executeReplace(cmd *ast.ReplaceCommand, input io.Reader, output io.Writer) error {
-	scanner := bufio.NewScanner(input)
+	scanner := newScanner(input)
 
 	var re *regexp.Regexp
 
@@ -111,7 +120,7 @@ func executeReplace(cmd *ast.ReplaceCommand, input io.Reader, output io.Writer) 
 }
 
 func executeDelete(cmd *ast.DeleteCommand, input io.Reader, output io.Writer) error {
-	scanner := bufio.NewScanner(input)
+	scanner := newScanner(input)
 
 	if cmd.LastN > 0 {
 		var lines []string
@@ -190,7 +199,7 @@ func executeDelete(cmd *ast.DeleteCommand, input io.Reader, output io.Writer) er
 }
 
 func executeShow(cmd *ast.ShowCommand, input io.Reader, output io.Writer) error {
-	scanner := bufio.NewScanner(input)
+	scanner := newScanner(input)
 
 	if cmd.LastN > 0 {
 		var lines []string
@@ -312,7 +321,7 @@ func matchPattern(
 }
 
 func executeInsert(cmd *ast.InsertCommand, input io.Reader, output io.Writer) error {
-	scanner := bufio.NewScanner(input)
+	scanner := newScanner(input)
 	var lines []string
 
 	for scanner.Scan() {
@@ -357,7 +366,7 @@ func executeInsert(cmd *ast.InsertCommand, input io.Reader, output io.Writer) er
 }
 
 func executeTransform(cmd *ast.TransformCommand, input io.Reader, output io.Writer) error {
-	scanner := bufio.NewScanner(input)
+	scanner := newScanner(input)
 
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -405,7 +414,7 @@ func toTitleCase(s string) string {
 }
 
 func executeCount(cmd *ast.CountCommand, input io.Reader, output io.Writer) error {
-	scanner := bufio.NewScanner(input)
+	scanner := newScanner(input)
 	count := 0
 
 	var re *regexp.Regexp
