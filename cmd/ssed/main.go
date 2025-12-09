@@ -15,24 +15,22 @@ import (
 	"github.com/Gx2-Studio/ssed/pkg/parser"
 )
 
-var (
-	version = "0.1.0"
-	preview bool
-	inPlace bool
-	backup  string
-	quiet   bool
-)
+var version = "0.1.0"
 
 func main() {
-	if err := rootCmd.Execute(); err != nil {
+	if err := Run(os.Args[1:], os.Stdin, os.Stdout, os.Stderr); err != nil {
 		os.Exit(1)
 	}
 }
 
-var rootCmd = &cobra.Command{
-	Use:   "ssed <query> [file...]",
-	Short: "Simple sed - text transformation in plain English",
-	Long: `ssed is a natural language interface for text transformation.
+func Run(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
+	var preview, inPlace, quiet bool
+	var backup string
+
+	rootCmd := &cobra.Command{
+		Use:   "ssed <query> [file...]",
+		Short: "Simple sed - text transformation in plain English",
+		Long: `ssed is a natural language interface for text transformation.
 
 Instead of learning sed syntax, just describe what you want in plain English.
 
@@ -41,24 +39,27 @@ Examples:
   ssed "delete error" < input.txt
   ssed "show warning" app.log
   cat data.txt | ssed "replace hello with hi"`,
+		Args:          cobra.MinimumNArgs(1),
+		SilenceUsage:  true,
+		SilenceErrors: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runQuery(args, stdin, stdout, stderr, preview, inPlace, backup, quiet)
+		},
+	}
 
-	Args: cobra.MinimumNArgs(1),
-	RunE: runQuery,
-}
+	versionCmd := &cobra.Command{
+		Use:   "version",
+		Short: "Print version information",
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Fprintf(stdout, "ssed version %s\n", version)
+		},
+	}
 
-var versionCmd = &cobra.Command{
-	Use:   "version",
-	Short: "Print version information",
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("ssed version %s\n", version)
-	},
-}
-
-var examplesCmd = &cobra.Command{
-	Use:   "examples",
-	Short: "Show usage examples",
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println(`ssed Usage Examples
+	examplesCmd := &cobra.Command{
+		Use:   "examples",
+		Short: "Show usage examples",
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Fprintln(stdout, `ssed Usage Examples
 ==================
 
 Replace text:
@@ -82,21 +83,26 @@ Options:
   ssed "replace foo with bar" file.txt --preview    # Preview changes
   ssed "replace foo with bar" file.txt -i           # Edit in-place
   ssed "replace foo with bar" file.txt -i --backup .bak  # With backup`)
-	},
-}
+		},
+	}
 
-func init() {
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(examplesCmd)
 
 	rootCmd.Flags().BoolVarP(&preview, "preview", "p", false, "Preview changes without applying")
 	rootCmd.Flags().BoolVarP(&inPlace, "in-place", "i", false, "Edit files in-place")
-	rootCmd.Flags().
-		StringVarP(&backup, "backup", "b", "", "Backup suffix for in-place editing (e.g., .bak)")
+	rootCmd.Flags().StringVarP(&backup, "backup", "b", "", "Backup suffix for in-place editing (e.g., .bak)")
 	rootCmd.Flags().BoolVarP(&quiet, "quiet", "q", false, "Suppress output (only show errors)")
+
+	rootCmd.SetArgs(args)
+	rootCmd.SetIn(stdin)
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
+
+	return rootCmd.Execute()
 }
 
-func runQuery(cmd *cobra.Command, args []string) error {
+func runQuery(args []string, stdin io.Reader, stdout, stderr io.Writer, preview, inPlace bool, backup string, quiet bool) error {
 	query := args[0]
 
 	lex := lexer.New(query)
@@ -127,7 +133,7 @@ func runQuery(cmd *cobra.Command, args []string) error {
 			filenames = append(filenames, filename)
 		}
 	} else {
-		inputs = append(inputs, os.Stdin)
+		inputs = append(inputs, stdin)
 		filenames = append(filenames, "stdin")
 	}
 
@@ -142,7 +148,7 @@ func runQuery(cmd *cobra.Command, args []string) error {
 			outputBuf = &strings.Builder{}
 			output = outputBuf
 		} else {
-			output = os.Stdout
+			output = stdout
 		}
 
 		var inputReader io.Reader = input
@@ -162,9 +168,9 @@ func runQuery(cmd *cobra.Command, args []string) error {
 		}
 
 		if preview && outputBuf != nil {
-			fmt.Printf("=== Preview for %s ===\n", filenames[idx])
-			fmt.Println(outputBuf.String())
-			fmt.Println("=== End preview (no changes made) ===")
+			fmt.Fprintf(stdout, "=== Preview for %s ===\n", filenames[idx])
+			fmt.Fprintln(stdout, outputBuf.String())
+			fmt.Fprintln(stdout, "=== End preview (no changes made) ===")
 		}
 
 		if inPlace && filenames[idx] != "stdin" && outputBuf != nil {
@@ -175,7 +181,7 @@ func runQuery(cmd *cobra.Command, args []string) error {
 				}
 
 				if !quiet {
-					fmt.Fprintf(os.Stderr, "Backup created: %s\n", backupName)
+					fmt.Fprintf(stderr, "Backup created: %s\n", backupName)
 				}
 			}
 
@@ -184,7 +190,7 @@ func runQuery(cmd *cobra.Command, args []string) error {
 			}
 
 			if !quiet {
-				fmt.Fprintf(os.Stderr, "Modified: %s\n", filenames[idx])
+				fmt.Fprintf(stderr, "Modified: %s\n", filenames[idx])
 			}
 		}
 	}

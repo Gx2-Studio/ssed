@@ -3,41 +3,27 @@ package main
 import (
 	"bytes"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 )
 
-func runSsed(t *testing.T, args ...string) (string, string, error) {
-	cmd := exec.Command("go", append([]string{"run", "."}, args...)...)
-	cmd.Dir = filepath.Join(os.Getenv("PWD"))
-
+func runSsed(args ...string) (string, string, error) {
 	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	err := cmd.Run()
+	err := Run(args, strings.NewReader(""), &stdout, &stderr)
 
 	return stdout.String(), stderr.String(), err
 }
 
-func runSsedWithStdin(t *testing.T, stdin string, args ...string) (string, string, error) {
-	cmd := exec.Command("go", append([]string{"run", "."}, args...)...)
-	cmd.Dir = filepath.Join(os.Getenv("PWD"))
-	cmd.Stdin = strings.NewReader(stdin)
-
+func runSsedWithStdin(stdin string, args ...string) (string, string, error) {
 	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	err := cmd.Run()
+	err := Run(args, strings.NewReader(stdin), &stdout, &stderr)
 
 	return stdout.String(), stderr.String(), err
 }
 
 func TestCLI_Version(t *testing.T) {
-	stdout, _, err := runSsed(t, "version")
+	stdout, _, err := runSsed("version")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -48,7 +34,7 @@ func TestCLI_Version(t *testing.T) {
 }
 
 func TestCLI_Help(t *testing.T) {
-	stdout, _, err := runSsed(t, "--help")
+	stdout, _, err := runSsed("--help")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -63,7 +49,7 @@ func TestCLI_Help(t *testing.T) {
 }
 
 func TestCLI_Examples(t *testing.T) {
-	stdout, _, err := runSsed(t, "examples")
+	stdout, _, err := runSsed("examples")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -108,7 +94,7 @@ func TestCLI_ReplaceWithStdin(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			stdout, _, err := runSsedWithStdin(t, tt.input, tt.query)
+			stdout, _, err := runSsedWithStdin(tt.input, tt.query)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -149,7 +135,7 @@ func TestCLI_DeleteWithStdin(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			stdout, _, err := runSsedWithStdin(t, tt.input, tt.query)
+			stdout, _, err := runSsedWithStdin(tt.input, tt.query)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -190,7 +176,7 @@ func TestCLI_ShowWithStdin(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			stdout, _, err := runSsedWithStdin(t, tt.input, tt.query)
+			stdout, _, err := runSsedWithStdin(tt.input, tt.query)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -237,7 +223,7 @@ func TestCLI_InsertWithStdin(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			stdout, _, err := runSsedWithStdin(t, tt.input, tt.query)
+			stdout, _, err := runSsedWithStdin(tt.input, tt.query)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -259,7 +245,7 @@ func TestCLI_FileInput(t *testing.T) {
 		t.Fatalf("failed to create temp file: %v", err)
 	}
 
-	stdout, _, err := runSsed(t, "replace foo with qux", tmpFile)
+	stdout, _, err := runSsed("replace foo with qux", tmpFile)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -280,7 +266,7 @@ func TestCLI_PreviewMode(t *testing.T) {
 		t.Fatalf("failed to create temp file: %v", err)
 	}
 
-	stdout, _, err := runSsed(t, "replace foo with qux", tmpFile, "--preview")
+	stdout, _, err := runSsed("replace foo with qux", tmpFile, "--preview")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -313,7 +299,7 @@ func TestCLI_InPlaceEdit(t *testing.T) {
 		t.Fatalf("failed to create temp file: %v", err)
 	}
 
-	_, stderr, err := runSsed(t, "replace foo with qux", tmpFile, "-i")
+	_, stderr, err := runSsed("replace foo with qux", tmpFile, "-i")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -340,7 +326,7 @@ func TestCLI_InPlaceWithBackup(t *testing.T) {
 		t.Fatalf("failed to create temp file: %v", err)
 	}
 
-	_, stderr, err := runSsed(t, "replace foo with qux", tmpFile, "-i", "--backup", ".bak")
+	_, stderr, err := runSsed("replace foo with qux", tmpFile, "-i", "--backup", ".bak")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -382,7 +368,7 @@ func TestCLI_QuietMode(t *testing.T) {
 		t.Fatalf("failed to create temp file: %v", err)
 	}
 
-	_, stderr, err := runSsed(t, "replace foo with qux", tmpFile, "-i", "-q")
+	_, stderr, err := runSsed("replace foo with qux", tmpFile, "-i", "-q")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -393,21 +379,21 @@ func TestCLI_QuietMode(t *testing.T) {
 }
 
 func TestCLI_InvalidQuery(t *testing.T) {
-	_, _, err := runSsedWithStdin(t, "hello\n", "invalid command")
+	_, _, err := runSsedWithStdin("hello\n", "invalid command")
 	if err == nil {
 		t.Error("expected error for invalid query")
 	}
 }
 
 func TestCLI_MissingQuery(t *testing.T) {
-	_, _, err := runSsed(t)
+	_, _, err := runSsed()
 	if err == nil {
 		t.Error("expected error when no query provided")
 	}
 }
 
 func TestCLI_FileNotFound(t *testing.T) {
-	_, _, err := runSsed(t, "replace foo with bar", "/nonexistent/file.txt")
+	_, _, err := runSsed("replace foo with bar", "/nonexistent/file.txt")
 	if err == nil {
 		t.Error("expected error for nonexistent file")
 	}
