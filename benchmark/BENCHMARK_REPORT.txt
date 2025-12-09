@@ -1,0 +1,28 @@
+SSED BENCHMARK REPORT
+=====================
+VERSION BENCHMARKED: 24b05ae1ab8e6f6fa959086e41aabe9789ce06be
+=====================
+
+Test                           │       ssed │        sed │       grep │       head │       tail │ Winner
+───────────────────────────────┼────────────┼────────────┼────────────┼────────────┼────────────┼─────────────────────
+Replace Small (1K lines)       │        2ms │        1ms │          — │          — │          — │ sed (1.5x)
+Replace Medium (100K lines)    │       13ms │       25ms │          — │          — │          — │ ssed (1.9x)
+Replace Large (1M lines)       │      179ms │      485ms │          — │          — │          — │ ssed (2.7x)
+Delete Pattern (100K log)      │       13ms │       23ms │       11ms │          — │          — │ grep (1.1x)
+Delete First N (100K)          │       12ms │       12ms │          — │          — │          — │ ~same (ssed/sed)
+Delete Last N (100K)           │        9ms │          — │          — │          — │          — │ ssed only
+Show Pattern (100K log)        │       10ms │       11ms │        4ms │          — │          — │ grep (2.8x)
+Show First N (1M)              │        2ms │      768µs │          — │      588µs │          — │ head (1.3x)
+Show Last N (1M)               │       48ms │          — │          — │          — │      566µs │ tail (84.8x)
+Regex Replace (100K)           │      151ms │      177ms │          — │          — │          — │ ssed (1.2x)
+Regex Delete (100K)            │       24ms │       28ms │       14ms │          — │          — │ grep (1.6x)
+Compound (100K)                │       16ms │       23ms │          — │          — │          — │ ssed (1.5x)
+Wide Lines (100KB lines)       │       54ms │      114ms │          — │          — │          — │ ssed (2.1x)
+
+SUMMARY
+-------
+  ssed: 5 wins
+  grep: 3 wins
+  sed: 1 wins
+  head: 1 wins
+  tail: 1 wins
