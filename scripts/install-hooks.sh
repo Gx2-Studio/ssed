@@ -7,7 +7,7 @@ cat > "$HOOK_DIR/pre-commit" << 'EOF'
 
 echo "Running golines..."
 if command -v golines > /dev/null 2>&1; then
-    find . -name "*.go" -exec golines -m 100 -w {} \;
+    find . -name "*.go" -exec golines -m 180 -w {} \;
 fi
 
 echo "Running golangci-lint..."
