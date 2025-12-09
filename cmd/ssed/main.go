@@ -2,12 +2,14 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
+	mmap "github.com/edsrzf/mmap-go"
 	"github.com/spf13/cobra"
 
 	"github.com/Gx2-Studio/ssed/pkg/executor"
@@ -16,6 +18,48 @@ import (
 )
 
 var version = "0.1.0"
+
+const mmapThreshold = 1 * 1024 * 1024 // use mmap for files larger than 1MB
+
+type mmapReader struct {
+	data   mmap.MMap
+	reader *bytes.Reader
+	file   *os.File
+}
+
+func newMmapReader(filename string) (*mmapReader, error) {
+	f, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := mmap.Map(f, mmap.RDONLY, 0)
+	if err != nil {
+		f.Close()
+
+		return nil, err
+	}
+
+	return &mmapReader{
+		data:   data,
+		reader: bytes.NewReader(data),
+		file:   f,
+	}, nil
+}
+
+func (m *mmapReader) Read(p []byte) (n int, err error) {
+	return m.reader.Read(p)
+}
+
+func (m *mmapReader) Close() error {
+	if err := m.data.Unmap(); err != nil {
+		m.file.Close()
+
+		return err
+	}
+
+	return m.file.Close()
+}
 
 func main() {
 	if err := Run(os.Args[1:], os.Stdin, os.Stdout, os.Stderr); err != nil {
@@ -119,19 +163,42 @@ func runQuery(args []string, stdin io.Reader, stdout, stderr io.Writer, preview,
 
 	var inputs []io.Reader
 	var filenames []string
+	var closers []func() error
 
 	if len(args) > 1 {
 		for _, filename := range args[1:] {
-			file, err := os.Open(filename)
+			fi, err := os.Stat(filename)
 			if err != nil {
-				return fmt.Errorf("error opening file %s: %w", filename, err)
+				return fmt.Errorf("error accessing file %s: %w", filename, err)
 			}
 
-			defer file.Close()
+			// Use mmap for large files
+			if fi.Size() > mmapThreshold {
+				mmapR, err := newMmapReader(filename)
+				if err != nil {
+					return fmt.Errorf("error opening file %s: %w", filename, err)
+				}
 
-			inputs = append(inputs, file)
+				closers = append(closers, mmapR.Close)
+				inputs = append(inputs, mmapR)
+			} else {
+				file, err := os.Open(filename)
+				if err != nil {
+					return fmt.Errorf("error opening file %s: %w", filename, err)
+				}
+
+				closers = append(closers, file.Close)
+				inputs = append(inputs, file)
+			}
+
 			filenames = append(filenames, filename)
 		}
+
+		defer func() {
+			for _, closer := range closers {
+				_ = closer()
+			}
+		}()
 	} else {
 		inputs = append(inputs, stdin)
 		filenames = append(filenames, "stdin")
