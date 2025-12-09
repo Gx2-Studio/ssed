@@ -325,6 +325,10 @@ func executeShow(cmd *ast.ShowCommand, input io.Reader, output io.Writer) error 
 				}
 			}
 
+			if lineNum >= cmd.FirstN {
+				break
+			}
+
 			continue
 		}
 
@@ -377,7 +381,7 @@ func matchPattern(
 		if wholeWordRe != nil {
 			return wholeWordRe.MatchString(line)
 		}
-		// Fallback (should not happen if caller pre-compiles)
+
 		pattern := `\b` + regexp.QuoteMeta(target) + `\b`
 		matched, _ := regexp.MatchString(pattern, line)
 
