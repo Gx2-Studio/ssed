@@ -123,6 +123,13 @@ func BenchmarkDelete_Log_Sed(b *testing.B) {
 	}
 }
 
+func BenchmarkDelete_Log_Grep(b *testing.B) {
+	file := filepath.Join(testDataDir, "log.txt")
+	for i := 0; i < b.N; i++ {
+		runGrep(b, "-v", "ERROR", file) // inverted match = delete matching lines
+	}
+}
+
 func BenchmarkDeleteFirst_Medium_Ssed(b *testing.B) {
 	file := filepath.Join(testDataDir, "medium.txt")
 	for i := 0; i < b.N; i++ {
@@ -158,6 +165,13 @@ func BenchmarkShow_Log_Sed(b *testing.B) {
 	}
 }
 
+func BenchmarkShow_Log_Grep(b *testing.B) {
+	file := filepath.Join(testDataDir, "log.txt")
+	for i := 0; i < b.N; i++ {
+		runGrep(b, "ERROR", file)
+	}
+}
+
 func BenchmarkShowFirst_Large_Ssed(b *testing.B) {
 	file := filepath.Join(testDataDir, "large.txt")
 	for i := 0; i < b.N; i++ {
@@ -168,7 +182,14 @@ func BenchmarkShowFirst_Large_Ssed(b *testing.B) {
 func BenchmarkShowFirst_Large_Sed(b *testing.B) {
 	file := filepath.Join(testDataDir, "large.txt")
 	for i := 0; i < b.N; i++ {
-		runSed(b, "-n", "1,100p", file)
+		runSed(b, "-n", "1,100p;100q", file) // Add ;100q for early exit
+	}
+}
+
+func BenchmarkShowFirst_Large_Head(b *testing.B) {
+	file := filepath.Join(testDataDir, "large.txt")
+	for i := 0; i < b.N; i++ {
+		runHead(b, "-100", file)
 	}
 }
 
@@ -176,6 +197,13 @@ func BenchmarkShowLast_Large_Ssed(b *testing.B) {
 	file := filepath.Join(testDataDir, "large.txt")
 	for i := 0; i < b.N; i++ {
 		runSsed(b, "show last 100 lines", file)
+	}
+}
+
+func BenchmarkShowLast_Large_Tail(b *testing.B) {
+	file := filepath.Join(testDataDir, "large.txt")
+	for i := 0; i < b.N; i++ {
+		runTail(b, "-100", file)
 	}
 }
 
@@ -207,10 +235,24 @@ func BenchmarkRegexDelete_Log_Sed(b *testing.B) {
 	}
 }
 
+func BenchmarkRegexDelete_Log_Grep(b *testing.B) {
+	file := filepath.Join(testDataDir, "log.txt")
+	for i := 0; i < b.N; i++ {
+		runGrep(b, "-Ev", `^\[WARN\]`, file) // -E extended regex, -v for inverted
+	}
+}
+
 func BenchmarkCompound_Log_Ssed(b *testing.B) {
 	file := filepath.Join(testDataDir, "log.txt")
 	for i := 0; i < b.N; i++ {
 		runSsed(b, "delete INFO then replace ERROR with CRITICAL", file)
+	}
+}
+
+func BenchmarkCompound_Log_Sed(b *testing.B) {
+	file := filepath.Join(testDataDir, "log.txt")
+	for i := 0; i < b.N; i++ {
+		runSed(b, "/INFO/d; s/ERROR/CRITICAL/g", file)
 	}
 }
 
@@ -253,5 +295,52 @@ func runSed(b *testing.B, args ...string) {
 
 	if err := cmd.Run(); err != nil {
 		b.Fatalf("sed failed: %v\nstderr: %s", err, stderr.String())
+	}
+}
+
+func runTail(b *testing.B, args ...string) {
+	b.Helper()
+
+	var stdout, stderr bytes.Buffer
+
+	cmd := exec.Command("tail", args...)
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		b.Fatalf("tail failed: %v\nstderr: %s", err, stderr.String())
+	}
+}
+
+func runHead(b *testing.B, args ...string) {
+	b.Helper()
+
+	var stdout, stderr bytes.Buffer
+
+	cmd := exec.Command("head", args...)
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		b.Fatalf("head failed: %v\nstderr: %s", err, stderr.String())
+	}
+}
+
+func runGrep(b *testing.B, args ...string) {
+	b.Helper()
+
+	var stdout, stderr bytes.Buffer
+
+	cmd := exec.Command("grep", args...)
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	// grep return 1 when no matches found, not an error
+	if err := cmd.Run(); err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
+			return // no matches ok
+		}
+
+		b.Fatalf("grep failed: %v\nstderr: %s", err, stderr.String())
 	}
 }

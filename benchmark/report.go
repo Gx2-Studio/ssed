@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -41,10 +42,13 @@ var testOrder = []string{
 	"Compound_Log", "WideLines",
 }
 
+var toolOrder = []string{"ssed", "sed", "grep", "head", "tail"}
+
 func main() {
-	re := regexp.MustCompile(`^Benchmark(\w+)_(Ssed|Sed)-\d+\s+(\d+)\s+([\d.]+)\s+ns/op`)
+	re := regexp.MustCompile(`^Benchmark(\w+)_(Ssed|Sed|Grep|Head|Tail)-\d+\s+(\d+)\s+([\d.]+)\s+ns/op`)
 
 	results := make(map[string]map[string]result)
+	toolsSeen := make(map[string]bool)
 	scanner := bufio.NewScanner(os.Stdin)
 
 	for scanner.Scan() {
@@ -65,16 +69,40 @@ func main() {
 		}
 
 		results[testName][tool] = result{name: testName, nsOp: nsOp, iters: iters}
+		toolsSeen[tool] = true
 	}
 
-	fmt.Println()
-	fmt.Println("╔════════════════════════════════════════════════════════════════════════════════════╗")
-	fmt.Println("║                              BENCHMARK RESULTS                                     ║")
-	fmt.Println("╠═══════════════════════════════╤═══════════╤═══════════╤═══════════╤════════════════╣")
-	fmt.Println("║ Test                          │ ssed      │ sed       │ Winner    │ Ratio          ║")
-	fmt.Println("╠═══════════════════════════════╪═══════════╪═══════════╪═══════════╪════════════════╣")
+	var tools []string
+	for _, t := range toolOrder {
+		if toolsSeen[t] {
+			tools = append(tools, t)
+		}
+	}
 
-	var ssedWins, sedWins, ssedOnly int
+	var sb strings.Builder
+
+	sb.WriteString("SSED BENCHMARK REPORT\n")
+	sb.WriteString("=====================\n\n")
+
+	testColWidth := 30
+	toolColWidth := 10
+
+	sb.WriteString(fmt.Sprintf("%-*s", testColWidth, "Test"))
+	for _, tool := range tools {
+		sb.WriteString(fmt.Sprintf(" │ %*s", toolColWidth, tool))
+	}
+	sb.WriteString(" │ Winner\n")
+
+	sb.WriteString(strings.Repeat("─", testColWidth))
+	for range tools {
+		sb.WriteString("─┼─")
+		sb.WriteString(strings.Repeat("─", toolColWidth))
+	}
+	sb.WriteString("─┼─")
+	sb.WriteString(strings.Repeat("─", 20))
+	sb.WriteString("\n")
+
+	wins := make(map[string]int)
 
 	for _, key := range testOrder {
 		res, ok := results[key]
@@ -87,55 +115,86 @@ func main() {
 			displayName = key
 		}
 
-		ssedRes, hasSsed := res["ssed"]
-		sedRes, hasSed := res["sed"]
+		sb.WriteString(fmt.Sprintf("%-*s", testColWidth, truncate(displayName, testColWidth)))
 
-		ssedTime := "—"
-		sedTime := "—"
-		winner := "—"
-		ratio := "—"
-
-		if hasSsed {
-			ssedTime = formatDuration(ssedRes.nsOp)
+		var bestTool string
+		var bestTime float64 = -1
+		var toolTimes []struct {
+			tool string
+			time float64
 		}
 
-		if hasSed {
-			sedTime = formatDuration(sedRes.nsOp)
-		}
-
-		if hasSsed && hasSed {
-			if ssedRes.nsOp < sedRes.nsOp {
-				r := sedRes.nsOp / ssedRes.nsOp
-				winner = "ssed"
-				ratio = fmt.Sprintf("%.1fx faster", r)
-				ssedWins++
-			} else if sedRes.nsOp < ssedRes.nsOp {
-				r := ssedRes.nsOp / sedRes.nsOp
-				if r < 1.1 {
-					winner = "~same"
-					ratio = "—"
-				} else {
-					winner = "sed"
-					ratio = fmt.Sprintf("%.1fx faster", r)
+		for _, tool := range tools {
+			if r, has := res[tool]; has {
+				toolTimes = append(toolTimes, struct {
+					tool string
+					time float64
+				}{tool, r.nsOp})
+				if bestTime < 0 || r.nsOp < bestTime {
+					bestTime = r.nsOp
+					bestTool = tool
 				}
-				sedWins++
-			} else {
-				winner = "tie"
-				ratio = "—"
 			}
-		} else if hasSsed {
-			winner = "ssed only"
-			ssedOnly++
 		}
 
-		fmt.Printf("║ %-29s │ %9s │ %9s │ %9s │ %14s ║\n",
-			truncate(displayName, 29), ssedTime, sedTime, winner, ratio)
+		for _, tool := range tools {
+			if r, has := res[tool]; has {
+				sb.WriteString(fmt.Sprintf(" │ %*s", toolColWidth, formatDuration(r.nsOp)))
+			} else {
+				sb.WriteString(fmt.Sprintf(" │ %*s", toolColWidth, "—"))
+			}
+		}
+
+		if len(toolTimes) >= 2 {
+
+			sort.Slice(toolTimes, func(i, j int) bool {
+				return toolTimes[i].time < toolTimes[j].time
+			})
+			secondBest := toolTimes[1].time
+			ratio := secondBest / bestTime
+
+			if ratio < 1.1 {
+				sb.WriteString(fmt.Sprintf(" │ ~same (%s/%s)", toolTimes[0].tool, toolTimes[1].tool))
+			} else {
+				sb.WriteString(fmt.Sprintf(" │ %s (%.1fx)", bestTool, ratio))
+				wins[bestTool]++
+			}
+		} else if len(toolTimes) == 1 {
+			sb.WriteString(fmt.Sprintf(" │ %s only", toolTimes[0].tool))
+		} else {
+			sb.WriteString(" │ —")
+		}
+
+		sb.WriteString("\n")
 	}
 
-	fmt.Println("╚═══════════════════════════════╧═══════════╧═══════════╧═══════════╧════════════════╝")
-	fmt.Println()
-	fmt.Printf("Summary: sed wins %d, ssed wins %d, ssed-only features: %d\n", sedWins, ssedWins, ssedOnly)
-	fmt.Println()
+	sb.WriteString("\n")
+	sb.WriteString("SUMMARY\n")
+	sb.WriteString("-------\n")
+
+	type winCount struct {
+		tool  string
+		count int
+	}
+	var winCounts []winCount
+	for tool, count := range wins {
+		winCounts = append(winCounts, winCount{tool, count})
+	}
+	sort.Slice(winCounts, func(i, j int) bool {
+		return winCounts[i].count > winCounts[j].count
+	})
+
+	for _, wc := range winCounts {
+		sb.WriteString(fmt.Sprintf("  %s: %d wins\n", wc.tool, wc.count))
+	}
+
+	err := os.WriteFile("BENCHMARK_REPORT.txt", []byte(sb.String()), 0o644)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error writing report: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println("Report written to BENCHMARK_REPORT.txt")
 }
 
 func formatDuration(ns float64) string {
@@ -158,4 +217,3 @@ func truncate(s string, maxLen int) string {
 
 	return s[:maxLen-1] + "…"
 }
-
