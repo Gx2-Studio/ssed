@@ -20,6 +20,45 @@ func newScanner(input io.Reader) *bufio.Scanner {
 	return scanner
 }
 
+type ringBuffer struct {
+	data  []string
+	head  int
+	count int
+}
+
+func newRingBuffer(capacity int) *ringBuffer {
+	return &ringBuffer{data: make([]string, capacity)}
+}
+
+func (r *ringBuffer) push(line string) (string, bool) {
+	var evicted string
+
+	var hasEvicted bool
+
+	if r.count == len(r.data) {
+		evicted = r.data[r.head]
+		hasEvicted = true
+	} else {
+		r.count++
+	}
+
+	r.data[r.head] = line
+	r.head = (r.head + 1) % len(r.data)
+
+	return evicted, hasEvicted
+}
+
+func (r *ringBuffer) lines() []string {
+	result := make([]string, r.count)
+	start := (r.head - r.count + len(r.data)) % len(r.data)
+
+	for i := 0; i < r.count; i++ {
+		result[i] = r.data[(start+i)%len(r.data)]
+	}
+
+	return result
+}
+
 func Execute(cmd ast.Command, input io.Reader, output io.Writer) error {
 	switch command := cmd.(type) {
 	case *ast.ReplaceCommand:
@@ -123,28 +162,17 @@ func executeDelete(cmd *ast.DeleteCommand, input io.Reader, output io.Writer) er
 	scanner := newScanner(input)
 
 	if cmd.LastN > 0 {
-		var lines []string
+		ring := newRingBuffer(cmd.LastN)
 
 		for scanner.Scan() {
-			lines = append(lines, scanner.Text())
-		}
-
-		if err := scanner.Err(); err != nil {
-			return err
-		}
-
-		cutoff := len(lines) - cmd.LastN
-		if cutoff < 0 {
-			cutoff = 0
-		}
-
-		for i := 0; i < cutoff; i++ {
-			if _, err := io.WriteString(output, lines[i]+"\n"); err != nil {
-				return err
+			if evicted, ok := ring.push(scanner.Text()); ok {
+				if _, err := io.WriteString(output, evicted+"\n"); err != nil {
+					return err
+				}
 			}
 		}
 
-		return nil
+		return scanner.Err()
 	}
 
 	lineNum := 0
@@ -202,23 +230,18 @@ func executeShow(cmd *ast.ShowCommand, input io.Reader, output io.Writer) error 
 	scanner := newScanner(input)
 
 	if cmd.LastN > 0 {
-		var lines []string
+		ring := newRingBuffer(cmd.LastN)
 
 		for scanner.Scan() {
-			lines = append(lines, scanner.Text())
+			ring.push(scanner.Text())
 		}
 
 		if err := scanner.Err(); err != nil {
 			return err
 		}
 
-		start := len(lines) - cmd.LastN
-		if start < 0 {
-			start = 0
-		}
-
-		for i := start; i < len(lines); i++ {
-			if _, err := io.WriteString(output, lines[i]+"\n"); err != nil {
+		for _, line := range ring.lines() {
+			if _, err := io.WriteString(output, line+"\n"); err != nil {
 				return err
 			}
 		}
