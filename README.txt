@@ -1,7 +1,7 @@
 SSED - SIMPLE SED
 =======================
 
-Text transformation using plain English instead of cryptic sed syntax.
+Text transformation CLI tool using plain English instead of cryptic sed syntax.
 
 INSTALLATION
 
